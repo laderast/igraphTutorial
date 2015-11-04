@@ -39,8 +39,6 @@ I used the following libraries to generate these slides.
 
 ```{r, message=FALSE}
 require(igraph)
-#require(graph)
-#require(Rgraphviz)
 require(knitr)
 ```
 
@@ -98,6 +96,40 @@ plot.igraph(karate, layout=layout.fruchterman.reingold,	# the layout method. see
         edge.arrow.size=2
 )
 ```
+
+##Graph Attributes
+
+Each element of a graph (vertices and edges) can be customized by passing in the appropriate attribute. For more info, check out [http://www.inside-r.org/packages/cran/igraph/docs/attributes](http://www.inside-r.org/packages/cran/igraph/docs/attributes).
+
+Some properties are automatically mapped, such as `V(graph)$color` or `E(graph)$color`. If you add a new attribute, you'll need to map this to a plotting property in `plot.igraph()`
+
+Remember, that after changing graph properties, such as node size, you need to run your layout_ function again.
+
+```{r}
+#setting node properties
+#can also use set.vertex.attributes() here
+newKarate <- karate
+
+faction <- c(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 2, 
+                     1, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+V(newKarate)$color <- faction
+
+#Set edge attributes using E(accessor)
+#can pass a named list for each node as well
+#You can also use set.edge.attributes() here
+E(newKarate)$color <- "red"
+
+#Here we instantiate a weight vector using sample
+weightvec <- sample(c(1,2,3,4), length(E(newKarate)), replace = TRUE)
+#Name each edge
+names(weightvec) <- E(newKarate)$name
+weightvec
+E(newKarate)$weight <- weightvec
+
+#note we need to map an attribute to a property of the graph (igraph is dumb)
+plot(newKarate, edge.width=E(karate)$weight)
+```
+
 
 ##Simple Measures
 
@@ -236,16 +268,17 @@ plot(karate, layout=layout_with_dh)
 ```
 
 
-##Graph Attributes
-
-Each element of a graph (vertices and edges) can be customized by passing in the appropriate attributes property. 
-
-Remember, that after changing graph properties, such as node size, you need to run your layout_ function again.
-
-
 ##Generating graphs from scratch
 
-Oftentimes, you will need to generate a bunch of graphs from scratch, for a background distribution or something.
+Oftentimes, you will need to generate a bunch of graphs from scratch, for a background distribution or something. There are some built in functions to do that.
+
+```{r}
+#Random Graphs
+
+rgGraph <- random.graph.game(34, p.or.m = 0.2)
+plot(rgGraph)
+hist(degree(rgGraph))
+```
 
 ```{r}
 #Erdos Renyi Graphs
@@ -316,13 +349,10 @@ I used a combination of ggplot2 and Rgraphviz to plot time-series data on a path
 
 Graphviz is not guaranteed to give you the best layout - it can take a lot of customization and specification of clusters. You may want to take your networks into a tool such as Cytoscape that will let you customize your graph much more.
 
+##Download this Tutorial
 
-##Take Home Points
+[github.com/laderast/igraphTutorial/][https://github.com/laderast/igraphTutorial]
 
-  * Exploring your data is essential to developing hypotheses
-  * Leverage current code
-  * Different Representations of Data can help you achieve different tasks
-  
 ##SessionInfo
 
 ```{r}

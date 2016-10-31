@@ -295,6 +295,14 @@ plot(bgGraph)
 hist(degree(bgGraph))
 ```
 
+##A Background Distribution For Surrogate Mutations
+
+How could we permute the nodes in a network while preserving overall structure?
+
+##Dynamic Networks
+
+If we preserve network layout, we can make simple movies that show how expression changes over time in reaction to a stimulus.
+
 ##Converting igraph Objects to Other Representations
 
 The graph package (not the igraph package!) contains the graphNEL and graphAM representations. I don't really go into using them here, but just know that you can convert back and forth from these different representations using different commands.

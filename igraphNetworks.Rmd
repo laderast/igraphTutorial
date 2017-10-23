@@ -2,10 +2,7 @@
 title: "Network Analysis in R"
 author: "Ted Laderas (laderast@ohsu.edu)"
 date: "October 24, 2017"
-output: 
-  learnr::tutorial:
-    progressive: true
-    allow_skip: true
+output: slidy_presentation
 fig.height: 6
 fig.width: 6
 runtime: shiny_prerendered
@@ -447,7 +444,7 @@ visNetwork(nodes, edges, height="600px", width="100%")
 
 ##Download this Tutorial
 
-[github.com/laderast/igraphTutorial/][https://github.com/laderast/igraphTutorial]
+[github.com/laderast/igraphTutorial/](https://github.com/laderast/igraphTutorial)
 
 ##SessionInfo
 

@@ -376,7 +376,7 @@ Make interactive networks with `visNetwork` and `shiny`!
 
 Why would you want to do this? Exploratory Data Analysis of the Network.
 
-```{r echo=FALSE, message=FALSE}
+```{r echo=FALSE, message=FALSE, eval=FALSE}
 require(shiny)
 require(visNetwork)
 
@@ -384,7 +384,7 @@ sliderInput("slide_me", "Try Sliding Me", min = 1, max=17, value = c(1,17))
 visNetworkOutput("network",height = "500px", width="600px")
 ```
 
-```{r context="server"}
+```{r context="server", eval=FALSE}
 library(igraph)
 karate <- read_graph("data/karate.gml", format="gml")
 

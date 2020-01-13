@@ -1,17 +1,29 @@
 ---
 title: "Network Analysis in R"
 author: "Ted Laderas (laderast@ohsu.edu)"
-date: "October 24, 2017"
-output: slidy_presentation
+date: "January 12, 2020"
+output: html_notebook
 fig.height: 6
 fig.width: 6
-runtime: shiny_prerendered
+#runtime: shiny_prerendered
 ---
 
 ```{r setup, include=FALSE}
 #knitr::opts_chunk$set(echo = )
-library(learnr)
 library(gridExtra)
+library(here)
+
+```
+
+## What you need to run this notebook
+
+I used the following libraries to generate these slides.
+
+```{r, message=FALSE}
+require(igraph)
+require(knitr)
+require(visNetwork)
+require(shiny)
 ```
 
 ##Overview
@@ -43,27 +55,17 @@ library(gridExtra)
     * Centrality (PageRank, Hub)
     * Isomorphic Relations (Motif Finding)
 
-## What you need to run these slides
 
-I used the following libraries to generate these slides.
+## Loading in Data into `igraph`
 
-```{r, message=FALSE}
-require(igraph)
-require(knitr)
-require(visNetwork)
-require(shiny)
-```
-
-## Loading in Data into igraph
-
-The igraph package has parsers for reading in most of the general file formats for networks. Let's load in the Karate network from [Network Example Data](http://www-personal.umich.edu/~mejn/netdata/). It's in GML format, so we'll need to specify that when we use `read_graph()`.
+The `igraph` package has parsers for reading in most of the general file formats for networks. Let's load in the Karate network from [Network Example Data](http://www-personal.umich.edu/~mejn/netdata/). It's in GML format, so we'll need to specify that when we use `read_graph()`.
 
 ```{r fig.height=6, fig.width=6}
 library(igraph)
-karate <- read_graph("data/karate.gml", format="gml")
+karate <- read_graph(here("data", "karate.gml"), format="gml")
 class(karate)
+##plot the graph (you can also just use plot(karate) as well)
 plot.igraph(karate)
-
 ```
 
 ## Adding Labels and Improving the Layout
@@ -183,11 +185,15 @@ pr <- page.rank(karate)
 sort(pr$vector, decreasing = TRUE)
 nk <- V(karate)$name
 cor(pr$vector[nk], probKarate[nk])
+```
 
+```{r}
 ec <- eigen_centrality(karate)
 sort(ec$vector, decreasing = TRUE)
 cor(ec$vector[nk], probKarate[nk])
+```
 
+```{r}
 hs <- hub_score(karate)
 sort(hs$vector, decreasing = TRUE)
 cor(hs$vector[nk], probKarate[nk])
@@ -215,11 +221,15 @@ Can we split the network up into smaller communities? There are number of commun
 ##Segment the karate network using the fast-greedy algorithm
 fgComm <- fastgreedy.community(karate)
 plot(fgComm, karate)
+```
 
+```{r}
 ##Segment the karate network using the walktrap algorithm
 wkComm <- walktrap.community(karate)
 plot(wkComm, karate)
+```
 
+```{r}
 ##how close are the algorithms?
 compare(membership(fgComm), membership(wkComm))
 ```
@@ -235,10 +245,14 @@ fgCommMembers <- membership(fgComm)
 ##let's extract the one of the cliques
 clique1 <- induced.subgraph(karate, v=largeKarateCliques[[1]]$name)
 plot(clique1)
+```
 
+```{r}
 #how many different communities are there?
 levels(factor(fgCommMembers))
+```
 
+```{r}
 comm1 <- induced.subgraph(karate, fgCommMembers == 1)
 plot(comm1)
 ```
@@ -251,6 +265,9 @@ How do we find all of Emma's friends?
 emmasNeighbors <- neighbors(karate, v="Emma", mode="all")
 emmaSubnet <- c("Emma",emmasNeighbors$name)
 emmaSubnet
+```
+
+```{r}
 emmaSubgraph <- induced.subgraph(karate, emmaSubnet)
 plot(emmaSubgraph)
 ```
@@ -262,16 +279,24 @@ igraph's built in plotting is not super customizable, but you can change layouts
 ```{r fig.height=6, fig.width=6}
 #circle plot
 plot(karate, layout=layout_in_circle)
+```
 
+```{r}
 #layout plot on grid
 plot(karate, layout=layout_on_grid)
+```
 
+```{r}
 #force-directed layout for large graphs
 plot(karate, layout=layout_with_lgl)
+```
 
+```{r}
 #layout plot with center (star layout)
 plot(karate, layout=layout_as_star)
+```
 
+```{r}
 #layout plot on grid
 plot(karate, layout=layout_with_dh)
 
@@ -316,7 +341,10 @@ karateGN
 #Adjacency matrix
 karateAM <- as(karateGN, "graphAM")
 karateAM
+```
 
+
+```{r}
 #look at the actual adjacency matrix
 karateAdjMat <- karateAM@adjMat
 rownames(karateAdjMat) <- colnames(karateAdjMat)
@@ -377,52 +405,7 @@ Make interactive networks with `visNetwork` and `shiny`!
 Why would you want to do this? Exploratory Data Analysis of the Network.
 
 ```{r echo=FALSE, message=FALSE, eval=FALSE}
-require(shiny)
-require(visNetwork)
-
-sliderInput("slide_me", "Try Sliding Me", min = 1, max=17, value = c(1,17))
-visNetworkOutput("network",height = "500px", width="600px")
-```
-
-```{r context="server", eval=FALSE}
-library(igraph)
-karate <- read_graph("data/karate.gml", format="gml")
-
-karate <- set.vertex.attribute(karate, "name", 
-                               value=c("Chloe", "Emily", "Aaliyah", "Emma", 
-                                       "Jennifer", "Olivia", "Hannah",
-                                       "Jessica", "Sarah", "Lily", "Charlotte", 
-                                       "Elizabeth", "Abigail", "Rebecca",
-                                       "Samantha", "Jacob", "Muhammad", "Shawn", 
-                                        "Aaron", "Daniel", "Jonah", "Alex", 
-                                       "Michael", "James", "Ryan", "Jordan", 
-                                       "Alexander", "Ali", "Tyler", "Kevin", 
-                                       "Jack", "Ethan", "Luke", "Harry"))
-
-deg <- igraph::degree(karate)
-
-kInt <- toVisNetworkData(karate)
-    
-nodes <- kInt$nodes
-nodes$label <- rownames(nodes)
-nodes$id <- rownames(nodes)
-
-edges <- kInt$edges
-
-  output$network <- renderVisNetwork({
-    # minimal example
-    visNetwork(nodes, edges, height="600px", width="100%") %>%
-      visOptions(highlightNearest = TRUE) %>%
-      visInteraction(navigationButtons = TRUE)
-  })
-  
-observe({
-  nodes_selection <- names(deg[deg >= min(input$slide_me) & deg <= max(input$slide_me)])
-  print(names(nodes_selection))
-  print(nodes_selection)
-  visNetworkProxy("network") %>%
-    visSelectNodes(id = nodes_selection,highlightEdges = TRUE,clickEvent = TRUE)
-})
+runApp(here("vs_app"))
 ```
 
 ## `visNetwork` objects and `igraph` objects

@@ -7,8 +7,6 @@ USER ${NB_USER}
 
 RUN install2.r --error \
     --deps TRUE \
-    here \
-    gridExtra \
     igraph \
     visNetwork \
     here 

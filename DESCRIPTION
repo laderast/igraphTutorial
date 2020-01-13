@@ -1,14 +1,14 @@
 Type: Compendium
-Package: Compendium title
+Package: Intro to Igraph Analysis
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.1
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Ted",
+           family = "Laderas",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
+           email = "ted.laderas@gmail.com.com",
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: Compendium description
+Description: Interactive notebook for teaching simple network analysis concepts.
 License: What license it uses
 Depends: 
     graph,

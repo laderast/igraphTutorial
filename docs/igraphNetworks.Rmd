@@ -1,0 +1,454 @@
+---
+title: "Network Analysis in R"
+author: "Ted Laderas (laderast@ohsu.edu)"
+date: "October 24, 2017"
+output: slidy_presentation
+fig.height: 6
+fig.width: 6
+runtime: shiny_prerendered
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = )
+library(learnr)
+library(gridExtra)
+library(here)
+```
+
+##Overview
+
+  * R Tools for Network Analysis
+      * igraph 
+      * Rgraphviz
+      * visNetwork
+
+##Network Data Representations useful in R
+
+  * `graphNEL` (node/edge list representation)
+    * Easy to add/remove nodes and edges
+  * `graphAM` (adjacency matrix)
+    * Useful for permutations
+  * `igraph` object (part of the igraph package)  
+
+##The igraph package
+
+  * R, Python and C implementations
+  * Build and modify networks by nodes and edges
+  * Extract subgraphs given nodes
+    * Clique Detection
+    * Community Detection algorithms (graphlets, random walk, etc)
+  * Instantiate different background networks
+    * Erdos-Renyi
+    * Barabasi-Albert
+  * Network Metrics
+    * Centrality (PageRank, Hub)
+    * Isomorphic Relations (Motif Finding)
+
+## What you need to run these slides
+
+I used the following libraries to generate these slides.
+
+```{r, message=FALSE}
+require(igraph)
+require(knitr)
+require(visNetwork)
+require(shiny)
+```
+
+## Loading in Data into igraph
+
+The igraph package has parsers for reading in most of the general file formats for networks. Let's load in the Karate network from [Network Example Data](http://www-personal.umich.edu/~mejn/netdata/). It's in GML format, so we'll need to specify that when we use `read_graph()`.
+
+```{r fig.height=6, fig.width=6}
+library(igraph)
+karate <- read_graph(here("data", "karate.gml"), format="gml")
+class(karate)
+plot.igraph(karate)
+
+```
+
+## Adding Labels and Improving the Layout
+
+That's not very informative, especially since the original data doesn't have labels. Let's add some:
+
+```{r fig.height=6, fig.width=6}
+get.vertex.attribute(karate, "id")
+karate <- set.vertex.attribute(karate, "name", 
+                               value=c("Chloe", "Emily", "Aaliyah", "Emma", 
+                                       "Jennifer", "Olivia", "Hannah",
+                                       "Jessica", "Sarah", "Lily", "Charlotte", 
+                                       "Elizabeth", "Abigail", "Rebecca",
+                                       "Samantha", "Jacob", "Muhammad", "Shawn", 
+                                        "Aaron", "Daniel", "Jonah", "Alex", 
+                                       "Michael", "James", "Ryan", "Jordan", 
+                                       "Alexander", "Ali", "Tyler", "Kevin", 
+                                       "Jack", "Ethan", "Luke", "Harry"))
+
+#V() is a way to programmatically access vertices (or nodes) for igraph
+V(karate)
+
+#get the ids (as a vector)
+V(karate)$name
+
+#look at edges
+E(karate)
+```
+
+## A More informative plot
+
+```{r fig.height=6, fig.width=6}
+#layout example from https://rulesofreason.wordpress.com/2012/11/05/network-visualization-in-r-with-the-igraph-package/
+plot.igraph(karate, layout=layout.fruchterman.reingold,	# the layout method. see the igraph documentation for details
+        main='Karate Friends!',	#specifies the title
+        #vertex.label.dist=0.5,			#puts the name labels slightly off the dots
+        vertex.label.color='black',		#the color of the name labels
+        vertex.label.font=1,			#the font of the name labels
+        vertex.label=V(karate)$name,		#specifies the labels of the vertices. in this case the 'name' attribute is used
+        vertex.label.cex=0.75,			#specifies the size of the font of the labels. can also be made to vary
+        vertex.size=degree(karate)*1.5, #make node size proportional to number of connections
+        edge.arrow.size=2
+)
+```
+
+## Graph Attributes
+
+Each element of a graph (vertices and edges) can be customized by passing in the appropriate attribute. For more info, check out [http://www.inside-r.org/packages/cran/igraph/docs/attributes](http://www.inside-r.org/packages/cran/igraph/docs/attributes).
+
+Some properties are automatically mapped, such as `V(graph)$color` or `E(graph)$color`. If you add a new attribute, you'll need to map this to a plotting property in `plot.igraph()`
+
+Remember, that after changing graph properties, such as node size, you need to run your `layout_` function again.
+
+```{r fig.height=6, fig.width=6}
+#setting node properties
+#can also use set.vertex.attributes() here
+newKarate <- karate
+
+faction <- c(1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 2, 
+                     1, 2, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+V(newKarate)$color <- faction
+
+#Set edge attributes using E(accessor)
+#can pass a named list for each node as well
+#You can also use set.edge.attributes() here
+E(newKarate)$color <- "red"
+
+#Here we instantiate a weight vector using sample
+weightvec <- sample(c(1,2,3,4), length(E(newKarate)), replace = TRUE)
+#Name each edge
+names(weightvec) <- E(newKarate)$name
+weightvec
+E(newKarate)$weight <- weightvec
+
+#note we need to map an attribute to a property of the graph (igraph is dumb)
+plot(newKarate, edge.width=E(karate)$weight)
+```
+
+## Simple Measures
+
+Degree Distribution and Average Path Length
+
+```{r fig.height=6, fig.width=6}
+degree(karate)
+sort(degree(karate), decreasing = TRUE)
+hist(degree(karate))
+```
+
+```{r fig.height=6, fig.width=6}
+average.path.length(karate)
+shortPaths <- get.shortest.paths(karate, from="Muhammad")
+
+plot(karate, mark.groups=shortPaths$vpath[c(10)])
+```
+
+## Drunken Stumbling
+
+Let's generate a random walk from Jennifer and see where we get.
+
+```{r}
+w <- random_walk(karate, start = "Jennifer", steps =1000)
+
+#who is the most visited?
+sort(table(w$name), decreasing = TRUE)
+#normalize table by number of visits
+probKarate <- table(w$name)/1000
+```
+
+## Influencers
+
+Who are the influencers (or hubs) in this social network? Let's use some network centrality measures to see. Are there any differences?
+
+Who gives the highest correlation with our drunken walk probabilities?
+
+```{r}
+pr <- page.rank(karate)
+sort(pr$vector, decreasing = TRUE)
+nk <- V(karate)$name
+cor(pr$vector[nk], probKarate[nk])
+
+ec <- eigen_centrality(karate)
+sort(ec$vector, decreasing = TRUE)
+cor(ec$vector[nk], probKarate[nk])
+
+hs <- hub_score(karate)
+sort(hs$vector, decreasing = TRUE)
+cor(hs$vector[nk], probKarate[nk])
+```
+
+## Cliques?
+
+Who's the most connected groups to each other? Enquiring minds want to know...
+
+```{r}
+##get all cliques in the data
+karateCliques <- cliques(karate)
+length(karateCliques)
+
+#let's try finding the largest cliques
+largeKarateCliques <- largest_cliques(karate)
+largeKarateCliques
+```
+
+## What are the Karate communities?
+
+Can we split the network up into smaller communities? There are number of community detection algorithms we can use to see if we can cleanly separate our network into smaller modules, or communities.
+
+```{r fig.height=6, fig.width=6}
+##Segment the karate network using the fast-greedy algorithm
+fgComm <- fastgreedy.community(karate)
+plot(fgComm, karate)
+
+##Segment the karate network using the walktrap algorithm
+wkComm <- walktrap.community(karate)
+plot(wkComm, karate)
+
+##how close are the algorithms?
+compare(membership(fgComm), membership(wkComm))
+```
+
+## Extracting subgraphs from community membership
+
+If there is a community of interest, we can use `induced.subgraph`.
+
+```{r fig.height=6, fig.width=6}
+##extract the membership vector for the fastgreedy community
+fgCommMembers <- membership(fgComm)
+
+##let's extract the one of the cliques
+clique1 <- induced.subgraph(karate, v=largeKarateCliques[[1]]$name)
+plot(clique1)
+
+#how many different communities are there?
+levels(factor(fgCommMembers))
+
+comm1 <- induced.subgraph(karate, fgCommMembers == 1)
+plot(comm1)
+```
+
+## Other searches
+
+How do we find all of Emma's friends?
+
+```{r fig.height=6, fig.width=6}
+emmasNeighbors <- neighbors(karate, v="Emma", mode="all")
+emmaSubnet <- c("Emma",emmasNeighbors$name)
+emmaSubnet
+emmaSubgraph <- induced.subgraph(karate, emmaSubnet)
+plot(emmaSubgraph)
+```
+
+## Other Plot Layouts
+
+igraph's built in plotting is not super customizable, but you can change layouts. All of the different igraph layouts begin with "layout_".
+
+```{r fig.height=6, fig.width=6}
+#circle plot
+plot(karate, layout=layout_in_circle)
+
+#layout plot on grid
+plot(karate, layout=layout_on_grid)
+
+#force-directed layout for large graphs
+plot(karate, layout=layout_with_lgl)
+
+#layout plot with center (star layout)
+plot(karate, layout=layout_as_star)
+
+#layout plot on grid
+plot(karate, layout=layout_with_dh)
+
+```
+
+## Generating graphs from scratch
+
+Oftentimes, you will need to generate a bunch of graphs from scratch, for a background distribution. There are some built in functions to do that.
+
+```{r fig.height=6, fig.width=6}
+#Random Graphs
+
+rgGraph <- random.graph.game(34, p.or.m = 0.2)
+plot(rgGraph)
+hist(degree(rgGraph))
+```
+
+```{r fig.height=6, fig.width=6}
+#Erdos Renyi Graphs
+erGraph <- erdos.renyi.game(34, 0.1)
+plot(erGraph)
+hist(degree(erGraph))
+```
+
+```{r fig.height=6, fig.width=6}
+#Barabasi graphs - power law distributed
+bgGraph <- barabasi.game(34, 1)
+plot(bgGraph)
+#Confirm edge distribution is correct
+hist(degree(bgGraph))
+```
+
+##Converting igraph Objects to Other Representations
+
+The graph package (not the igraph package!) contains the graphNEL and graphAM representations. I don't really go into using them here, but just know that you can convert back and forth from these different representations using different commands.
+
+```{r fig.height=6, fig.width=6}
+library(graph)
+#graphNEL objects
+karateGN <- igraph.to.graphNEL(karate)
+karateGN
+#Adjacency matrix
+karateAM <- as(karateGN, "graphAM")
+karateAM
+
+#look at the actual adjacency matrix
+karateAdjMat <- karateAM@adjMat
+rownames(karateAdjMat) <- colnames(karateAdjMat)
+rowSums(karateAdjMat)
+colSums(karateAdjMat)
+karateAdjMat
+```
+
+## Exporting out graphs
+
+Sometimes you want to take your subgraphs and use a program like Cytoscape to make the visualization prettier.
+
+Writing to GML format will preserve most of your information.
+
+```{r eval=FALSE}
+write_graph(karate, file="karate2.gml", format="gml")
+```
+
+Lots of other output options, including:
+
++ GraphML
++ EdgeList
++ LGL
+
+## cyREST API
+
+The cyREST API allows you to programatically transfer network data into Cytoscape. It's a bit quirky to set up and use, but once you set it up, you can transfer all network attributes (edge, node, and graph) that you've assigned to your GraphNEL objects directly into Cytoscape.
+
+For more info, check this link out: [https://github.com/idekerlab/cy-rest-R](https://github.com/idekerlab/cy-rest-R)
+
+##Rgraphviz
+
+  * Graphviz: mature package for network and graph visualization (AT&T)
+  * Can define custom node graphics using viewports
+  * Multiple Layouts
+    * dot (hierarchical)
+    * neato (force-directed, spring-model)
+    * twopi (radial plots)
+    * circo (circular graphs)
+  * Clusters (subgraphs) for more control over the layout
+
+##Custom Node Graphics + KEGGgraph + cluster layout in `Rgraphviz`
+
+I used a combination of `ggplot2` and `Rgraphviz` to plot time-series data on a pathway defined by KEGG. To get this to work, I had to define some clusters in the graph layout.
+
+<img src="figures/BT474-mtor-test.png" alt="mTOR-pathway-Rgraphviz" style="width: 800px;"/>
+
+##Drawbacks to `Rgraphviz`
+
+`Graphviz` is not guaranteed to give you the best layout - it can take a lot of customization and specification of clusters. You may want to take your networks into a tool such as Cytoscape that will let you customize your graph much more.
+
+More info on customizing graph layout for Rgraphviz here: https://bioconductor.org/packages/release/bioc/vignettes/biocGraph/inst/doc/layingOutPathways.pdf
+
+## `visNetwork`
+
+Make interactive networks with `visNetwork` and `shiny`!
+
+Why would you want to do this? Exploratory Data Analysis of the Network.
+
+```{r echo=FALSE, message=FALSE, eval=FALSE}
+require(shiny)
+require(visNetwork)
+
+sliderInput("slide_me", "Try Sliding Me", min = 1, max=17, value = c(1,17))
+visNetworkOutput("network",height = "500px", width="600px")
+```
+
+```{r context="server", eval=FALSE}
+library(igraph)
+karate <- read_graph("data/karate.gml", format="gml")
+
+karate <- set.vertex.attribute(karate, "name", 
+                               value=c("Chloe", "Emily", "Aaliyah", "Emma", 
+                                       "Jennifer", "Olivia", "Hannah",
+                                       "Jessica", "Sarah", "Lily", "Charlotte", 
+                                       "Elizabeth", "Abigail", "Rebecca",
+                                       "Samantha", "Jacob", "Muhammad", "Shawn", 
+                                        "Aaron", "Daniel", "Jonah", "Alex", 
+                                       "Michael", "James", "Ryan", "Jordan", 
+                                       "Alexander", "Ali", "Tyler", "Kevin", 
+                                       "Jack", "Ethan", "Luke", "Harry"))
+
+deg <- igraph::degree(karate)
+
+kInt <- toVisNetworkData(karate)
+    
+nodes <- kInt$nodes
+nodes$label <- rownames(nodes)
+nodes$id <- rownames(nodes)
+
+edges <- kInt$edges
+
+  output$network <- renderVisNetwork({
+    # minimal example
+    visNetwork(nodes, edges, height="600px", width="100%") %>%
+      visOptions(highlightNearest = TRUE) %>%
+      visInteraction(navigationButtons = TRUE)
+  })
+  
+observe({
+  nodes_selection <- names(deg[deg >= min(input$slide_me) & deg <= max(input$slide_me)])
+  print(names(nodes_selection))
+  print(nodes_selection)
+  visNetworkProxy("network") %>%
+    visSelectNodes(id = nodes_selection,highlightEdges = TRUE,clickEvent = TRUE)
+})
+```
+
+## `visNetwork` objects and `igraph` objects
+
+I used `toVisNetworkData()` to convert my `igraph` `karate` object to a visNetwork object:
+
+```{r eval=FALSE}
+kInt <- toVisNetworkData(karate)
+
+#need to relabel nodes data.frame
+nodes <- kInt$nodes
+nodes$label <- rownames(nodes)
+nodes$id <- rownames(nodes)
+
+edges <- kInt$edges
+
+visNetwork(nodes, edges, height="600px", width="100%") 
+```
+
+##Download this Tutorial
+
+[github.com/laderast/igraphTutorial/](https://github.com/laderast/igraphTutorial)
+
+##SessionInfo
+
+```{r}
+sessionInfo()
+```

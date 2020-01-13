@@ -13,7 +13,6 @@ License: What license it uses
 Depends: 
     here,
     igraph,
-    shiny,
     visNetwork
 Remotes: 
     rstudio/rmarkdown

@@ -11,12 +11,8 @@ Authors@R:
 Description: Interactive notebook for teaching simple network analysis concepts.
 License: What license it uses
 Depends: 
-    gridExtra,
     here,
     igraph,
-    knitr,
-    learnr,
-    rmarkdown,
     shiny,
     visNetwork
 Remotes: 

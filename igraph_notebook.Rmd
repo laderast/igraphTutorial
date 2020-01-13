@@ -10,7 +10,7 @@ fig.width: 6
 
 ```{r setup, include=FALSE}
 #knitr::opts_chunk$set(echo = )
-library(gridExtra)
+#library(gridExtra)
 library(here)
 
 ```
@@ -29,9 +29,11 @@ require(shiny)
 ##Overview
 
   * R Tools for Network Analysis
-      * igraph 
-      * Rgraphviz
-      * visNetwork
+      * `igraph` 
+      * `Rgraphviz`
+      * `visNetwork`
+  * Not covered:
+      * `tidygraph`: https://tidygraph.data-imaginist.com/
 
 ##Network Data Representations useful in R
 
@@ -151,6 +153,9 @@ Degree Distribution and Average Path Length
 ```{r fig.height=6, fig.width=6}
 degree(karate)
 sort(degree(karate), decreasing = TRUE)
+```
+
+```{r}
 hist(degree(karate))
 ```
 
